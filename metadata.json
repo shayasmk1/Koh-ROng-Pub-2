@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Koh Rong Pub Crawl",
+  "description": "Official ticketing and event management platform for Koh Rong Pub Crawl. Features ABA PayWay integration, QR ticketing, and staff check-in.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

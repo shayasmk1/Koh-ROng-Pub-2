@@ -1,0 +1,182 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - name: string (required)
+    //   - email: string (required)
+    //   - whatsapp: string (optional)
+    //   - role: string (required, enum: 'user', 'admin', 'staff')
+    //   - created_at: string (required, immutable)
+    //
+    // Collection: orders
+    // Document ID: {orderId}
+    // Fields:
+    //   - order_id: string (required, immutable)
+    //   - user_id: string (required, immutable)
+    //   - event_date: string (required)
+    //   - quantity: number (required)
+    //   - amount: number (required)
+    //   - status: string (required, enum: 'pending', 'paid', 'failed')
+    //   - payment_link_id: string (optional)
+    //   - created_at: string (required, immutable)
+    //
+    // Collection: tickets
+    // Document ID: {ticketId}
+    // Fields:
+    //   - ticket_id: string (required, immutable)
+    //   - order_id: string (required, immutable)
+    //   - user_id: string (required, immutable)
+    //   - event_date: string (required)
+    //   - qr_code: string (required)
+    //   - checked_in: boolean (required)
+    //   - created_at: string (required, immutable)
+    //
+    // Collection: checkins
+    // Document ID: {checkinId}
+    // Fields:
+    //   - ticket_id: string (required, immutable)
+    //   - checkin_time: string (required, immutable)
+    //   - staff_id: string (required, immutable)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.user_id;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "wavesmanta9@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isStaff() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff' || isAdmin());
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'name', 'email', 'whatsapp', 'role', 'created_at']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
+             (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() < 50)) &&
+             data.role in ['user', 'admin', 'staff'] &&
+             data.created_at is string && isValidDateString(data.created_at);
+    }
+
+    function isValidOrder(data) {
+      return hasOnlyAllowedFields(['order_id', 'user_id', 'event_date', 'quantity', 'amount', 'full_name', 'email', 'whatsapp', 'status', 'payment_link_id', 'created_at']) &&
+             data.order_id is string && data.order_id.size() > 0 && data.order_id.size() < 100 &&
+             data.user_id is string && data.user_id.size() > 0 && data.user_id.size() < 100 &&
+             data.event_date is string && data.event_date.size() > 0 && data.event_date.size() < 50 &&
+             data.quantity is number && data.quantity > 0 && data.quantity <= 100 &&
+             data.amount is number && data.amount > 0 &&
+             data.full_name is string && data.full_name.size() > 0 && data.full_name.size() < 100 &&
+             data.email is string && isValidEmail(data.email) && data.email.size() < 100 &&
+             (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() < 50)) &&
+             data.status in ['pending', 'paid', 'failed'] &&
+             (!('payment_link_id' in data) || (data.payment_link_id is string && data.payment_link_id.size() < 200)) &&
+             data.created_at is string && isValidDateString(data.created_at);
+    }
+
+    function isValidTicket(data) {
+      return hasOnlyAllowedFields(['ticket_id', 'order_id', 'user_id', 'event_date', 'qr_code', 'checked_in', 'created_at']) &&
+             data.ticket_id is string && data.ticket_id.size() > 0 && data.ticket_id.size() < 100 &&
+             data.order_id is string && data.order_id.size() > 0 && data.order_id.size() < 100 &&
+             data.user_id is string && data.user_id.size() > 0 && data.user_id.size() < 100 &&
+             data.event_date is string && data.event_date.size() > 0 && data.event_date.size() < 50 &&
+             data.qr_code is string && data.qr_code.size() > 0 && data.qr_code.size() < 500 &&
+             data.checked_in is bool &&
+             data.created_at is string && isValidDateString(data.created_at);
+    }
+
+    function isValidCheckin(data) {
+      return hasOnlyAllowedFields(['ticket_id', 'checkin_time', 'staff_id']) &&
+             data.ticket_id is string && data.ticket_id.size() > 0 && data.ticket_id.size() < 100 &&
+             data.checkin_time is string && isValidDateString(data.checkin_time) &&
+             data.staff_id is string && data.staff_id.size() > 0 && data.staff_id.size() < 100;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isStaff();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) &&
+                    (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) &&
+                    (
+                      (isOwner(userId) && areImmutableFieldsUnchanged(['uid', 'created_at', 'role'])) ||
+                      isAdmin()
+                    );
+    }
+
+    match /orders/{orderId} {
+      allow read: if (isAuthenticated() && resource.data.user_id == request.auth.uid) || isStaff();
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid && isValidOrder(request.resource.data);
+      allow update: if isAuthenticated() && isValidOrder(request.resource.data) &&
+                    (
+                      (request.resource.data.user_id == request.auth.uid && areImmutableFieldsUnchanged(['order_id', 'user_id', 'quantity', 'amount', 'created_at'])) ||
+                      isAdmin()
+                    );
+    }
+
+    match /tickets/{ticketId} {
+      allow read: if (isAuthenticated() && resource.data.user_id == request.auth.uid) || isStaff();
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid && isValidTicket(request.resource.data);
+      allow update: if isAuthenticated() && isValidTicket(request.resource.data) &&
+                    (
+                      (isStaff() && areImmutableFieldsUnchanged(['ticket_id', 'order_id', 'user_id', 'event_date', 'qr_code', 'created_at'])) ||
+                      isAdmin()
+                    );
+    }
+
+    match /checkins/{checkinId} {
+      allow read: if isStaff();
+      allow create: if isStaff() && request.resource.data.staff_id == request.auth.uid && isValidCheckin(request.resource.data);
+      // Checkins are immutable records
+      allow update, delete: if false;
+    }
+  }
+}

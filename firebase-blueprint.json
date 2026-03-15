@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Koh Rong Pub Crawl platform.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "whatsapp": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin", "staff"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "role", "created_at"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A ticket purchase order.",
+      "type": "object",
+      "properties": {
+        "order_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "event_date": { "type": "string" },
+        "quantity": { "type": "number" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid", "failed"] },
+        "payment_link_id": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["order_id", "user_id", "event_date", "quantity", "amount", "status", "created_at"]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "description": "An individual ticket for the pub crawl.",
+      "type": "object",
+      "properties": {
+        "ticket_id": { "type": "string" },
+        "order_id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "event_date": { "type": "string" },
+        "qr_code": { "type": "string" },
+        "checked_in": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ticket_id", "order_id", "user_id", "event_date", "qr_code", "checked_in", "created_at"]
+    },
+    "Checkin": {
+      "title": "Checkin",
+      "description": "A record of a ticket being scanned.",
+      "type": "object",
+      "properties": {
+        "ticket_id": { "type": "string" },
+        "checkin_time": { "type": "string", "format": "date-time" },
+        "staff_id": { "type": "string" }
+      },
+      "required": ["ticket_id", "checkin_time", "staff_id"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Ticket orders"
+    },
+    "/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/Ticket" },
+      "description": "Individual tickets"
+    },
+    "/checkins/{checkinId}": {
+      "schema": { "$ref": "#/entities/Checkin" },
+      "description": "Ticket check-in records"
+    }
+  }
+}
