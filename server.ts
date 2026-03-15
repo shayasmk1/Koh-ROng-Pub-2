@@ -149,7 +149,6 @@ async function startServer() {
       
       if (return_url) merchantAuthObj.return_url = Buffer.from(return_url).toString('base64');
       if (payment_limit) merchantAuthObj.payment_limit = parseInt(payment_limit);
-      if (expired_date) merchantAuthObj.expired_date = parseInt(expired_date);
 
       // 2. Encrypt merchant_auth with RSA Public Key
       const merchantAuthStr = JSON.stringify(merchantAuthObj);
