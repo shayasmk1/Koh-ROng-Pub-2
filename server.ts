@@ -73,16 +73,26 @@ function encryptMerchantAuth(source: string, publicKey: string): string {
   return output.toString('base64');
 }
 
-// Helper function to get time with offset (default +8 hours for testing)
-function getReqTimeWithOffset(offsetHours: number = 8): string {
-  const d = new Date(Date.now() + (offsetHours * 60 * 60 * 1000));
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const hh = String(d.getUTCHours()).padStart(2, "0");
-  const mi = String(d.getUTCMinutes()).padStart(2, "0");
-  const ss = String(d.getUTCSeconds()).padStart(2, "0");
-  return `${yyyy}${mm}${dd}${hh}${mi}${ss}`;
+// Helper function to get Cambodia Local Time (GMT+7) using explicit timezone
+function getCambodiaTime(): string {
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: "Asia/Phnom_Penh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  
+  const formatter = new Intl.DateTimeFormat("en-US", options);
+  const parts = formatter.formatToParts(now);
+  const getPart = (type: string) => parts.find(p => p.type === type)?.value || "";
+  
+  // Format: YYYYMMDDHHmmss
+  return `${getPart('year')}${getPart('month')}${getPart('day')}${getPart('hour')}${getPart('minute')}${getPart('second')}`;
 }
 
 async function startServer() {
@@ -109,16 +119,14 @@ async function startServer() {
     try {
       let { amount, currency, title, description, payment_limit, return_url, merchant_ref_no } = req.body;
       
-      // Using +8 Hour Offset as requested
-      const req_time = getReqTimeWithOffset(8);
+      // Use explicit Cambodia Timezone
+      const req_time = getCambodiaTime();
       
-      // Ensure merchant_ref_no is unique
-      const unique_ref_no = `${merchant_ref_no}-${Date.now()}`;
-      
-      // Calculate expired_date (2 hours after req_time)
-      const expired_date = getReqTimeWithOffset(10);
+      // Ensure merchant_ref_no is unique but not too long (max 20 chars usually)
+      // We'll use a 6-digit random suffix instead of a full timestamp
+      const unique_ref_no = `${merchant_ref_no}-${Math.floor(100000 + Math.random() * 900000)}`.substring(0, 20);
 
-      console.log(`Generating Payment Request: req_time=${req_time}, expired_date=${expired_date}, ref=${unique_ref_no}`);
+      console.log(`Generating Payment Request: req_time=${req_time}, ref=${unique_ref_no}`);
 
       if (!merchantId || !apiKey || !rsaPublicKey) {
         console.error("Missing ABA PayWay credentials in environment variables.");
@@ -136,8 +144,7 @@ async function startServer() {
         amount: amount,
         currency: currency || "USD",
         title: title || "Koh Rong Pub Crawl",
-        description: description || "Tickets",
-        expired_date: expired_date // Pass as string
+        description: description || "Tickets"
       };
       
       if (return_url) merchantAuthObj.return_url = Buffer.from(return_url).toString('base64');
