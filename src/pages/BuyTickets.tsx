@@ -113,35 +113,12 @@ export default function BuyTickets() {
         created_at: new Date().toISOString()
       });
 
-      // 2. Call backend to generate ABA PayWay link
-      const getReqTimeUtc = () => {
-        const d = new Date();
-        const yyyy = d.getUTCFullYear();
-        const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-        const dd = String(d.getUTCDate()).padStart(2, "0");
-        const hh = String(d.getUTCHours()).padStart(2, "0");
-        const mi = String(d.getUTCMinutes()).padStart(2, "0");
-        const ss = String(d.getUTCSeconds()).padStart(2, "0");
-        return `${yyyy}${mm}${dd}${hh}${mi}${ss}`;
-      };
-
-      const reqTime = getReqTimeUtc();
-      const expiredDate = new Date(Date.now() + 15 * 60000);
-      const expiredDateStr = expiredDate.getUTCFullYear() + 
-        String(expiredDate.getUTCMonth() + 1).padStart(2, "0") + 
-        String(expiredDate.getUTCDate()).padStart(2, "0") + 
-        String(expiredDate.getUTCHours()).padStart(2, "0") + 
-        String(expiredDate.getUTCMinutes()).padStart(2, "0") + 
-        String(expiredDate.getUTCSeconds()).padStart(2, "0");
-
       const formData = new FormData();
-      formData.append('req_time', reqTime);
       formData.append('amount', amount.toFixed(2));
       formData.append('currency', 'USD');
       formData.append('title', `Koh Rong Pub Crawl - ${quantity} Tickets`);
       formData.append('description', `Tickets for ${date}`);
       formData.append('payment_limit', '1');
-      formData.append('expired_date', expiredDateStr);
       formData.append('return_url', `${window.location.origin}/success?order_id=${orderId}`);
       formData.append('merchant_ref_no', orderId);
 

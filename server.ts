@@ -107,12 +107,19 @@ async function startServer() {
     const rsaPublicKey = process.env.ABA_PAYWAY_RSA_PUBLIC_KEY;
 
     try {
-      let { req_time, amount, currency, title, description, payment_limit, expired_date, return_url, merchant_ref_no } = req.body;
+      let { amount, currency, title, description, payment_limit, return_url, merchant_ref_no } = req.body;
       
-      // Ensure req_time is in the correct format if not provided or if we want to be safe
-      if (!req_time) {
-        req_time = getReqTimeUtc();
-      }
+      // ALWAYS use server-side time to prevent "Request is Expired" errors
+      const req_time = getReqTimeUtc();
+      
+      // Calculate expired_date on server (15 minutes from now)
+      const expDate = new Date(Date.now() + 15 * 60000);
+      const expired_date = expDate.getUTCFullYear() + 
+        String(expDate.getUTCMonth() + 1).padStart(2, "0") + 
+        String(expDate.getUTCDate()).padStart(2, "0") + 
+        String(expDate.getUTCHours()).padStart(2, "0") + 
+        String(expDate.getUTCMinutes()).padStart(2, "0") + 
+        String(expDate.getUTCSeconds()).padStart(2, "0");
 
       if (!merchantId || !apiKey || !rsaPublicKey) {
         console.error("Missing ABA PayWay credentials in environment variables.");
