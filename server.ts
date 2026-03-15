@@ -73,15 +73,18 @@ function encryptMerchantAuth(source: string, publicKey: string): string {
   return output.toString('base64');
 }
 
-// Helper function to get UTC time in YYYYMMDDHHmmss format
-function getReqTimeUtc(): string {
+// Helper function to get Cambodia Local Time (GMT+7) in YYYYMMDDHHmmss format
+function getReqTimeCambodia(): string {
   const d = new Date();
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const hh = String(d.getUTCHours()).padStart(2, "0");
-  const mi = String(d.getUTCMinutes()).padStart(2, "0");
-  const ss = String(d.getUTCSeconds()).padStart(2, "0");
+  // Cambodia is UTC+7
+  const cambodiaTime = new Date(d.getTime() + (7 * 60 * 60 * 1000));
+  
+  const yyyy = cambodiaTime.getUTCFullYear();
+  const mm = String(cambodiaTime.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(cambodiaTime.getUTCDate()).padStart(2, "0");
+  const hh = String(cambodiaTime.getUTCHours()).padStart(2, "0");
+  const mi = String(cambodiaTime.getUTCMinutes()).padStart(2, "0");
+  const ss = String(cambodiaTime.getUTCSeconds()).padStart(2, "0");
   return `${yyyy}${mm}${dd}${hh}${mi}${ss}`;
 }
 
@@ -109,11 +112,16 @@ async function startServer() {
     try {
       let { amount, currency, title, description, payment_limit, return_url, merchant_ref_no } = req.body;
       
-      // ALWAYS use server-side time to prevent "Request is Expired" errors
-      const req_time = getReqTimeUtc();
+      // ALWAYS use Cambodia Local Time (GMT+7)
+      const req_time = getReqTimeCambodia();
       
-      // Calculate expired_date on server (15 minutes from now)
-      const expDate = new Date(Date.now() + 15 * 60000);
+      // Ensure merchant_ref_no is unique by appending a timestamp if it's not already unique
+      // This prevents "Expired" errors caused by reusing an old reference number
+      const unique_ref_no = `${merchant_ref_no}-${Date.now()}`;
+      
+      // Calculate expired_date on server (2 hours from now in Cambodia time)
+      const now = new Date();
+      const expDate = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (120 * 60 * 1000));
       const expired_date = expDate.getUTCFullYear() + 
         String(expDate.getUTCMonth() + 1).padStart(2, "0") + 
         String(expDate.getUTCDate()).padStart(2, "0") + 
@@ -132,7 +140,7 @@ async function startServer() {
       // 1. Prepare merchant_auth JSON object
       const merchantAuthObj: any = {
         merchant_id: merchantId,
-        merchant_ref_no: merchant_ref_no,
+        merchant_ref_no: unique_ref_no,
         req_time: req_time,
         amount: amount,
         currency: currency || "USD",
