@@ -48,8 +48,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await setDoc(userDocRef, newUserData);
             setUserData(newUserData);
           }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
+        } catch (error: any) {
+          console.error("Firestore Permission Error Detail:", {
+            message: error.message,
+            code: error.code,
+            uid: currentUser.uid,
+            email: currentUser.email
+          });
         }
       } else {
         setUserData(null);
