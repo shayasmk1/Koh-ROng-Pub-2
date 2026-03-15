@@ -7,6 +7,9 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 import FormData from "form-data";
 
+// Set global timezone to Cambodia
+process.env.TZ = "Asia/Phnom_Penh";
+
 // Helper function to format RSA Public Key if it was pasted as a single line
 function formatPublicKey(key: string): string {
   // Remove all whitespace, newlines, and literal '\n' strings
@@ -73,26 +76,16 @@ function encryptMerchantAuth(source: string, publicKey: string): string {
   return output.toString('base64');
 }
 
-// Helper function to get Cambodia Local Time (GMT+7) using explicit timezone
+// Helper function to get Cambodia Local Time (GMT+7)
 function getCambodiaTime(): string {
-  const now = new Date();
-  const options: Intl.DateTimeFormatOptions = {
-    timeZone: "Asia/Phnom_Penh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  };
-  
-  const formatter = new Intl.DateTimeFormat("en-US", options);
-  const parts = formatter.formatToParts(now);
-  const getPart = (type: string) => parts.find(p => p.type === type)?.value || "";
-  
-  // Format: YYYYMMDDHHmmss
-  return `${getPart('year')}${getPart('month')}${getPart('day')}${getPart('hour')}${getPart('minute')}${getPart('second')}`;
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}${hh}${mi}${ss}`;
 }
 
 async function startServer() {
