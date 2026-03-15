@@ -73,9 +73,9 @@ function encryptMerchantAuth(source: string, publicKey: string): string {
   return output.toString('base64');
 }
 
-// Helper function to get UTC time in YYYYMMDDHHmmss format
-function getReqTimeUtc(): string {
-  const d = new Date();
+// Helper function to get time with offset (default +8 hours for testing)
+function getReqTimeWithOffset(offsetHours: number = 8): string {
+  const d = new Date(Date.now() + (offsetHours * 60 * 60 * 1000));
   const yyyy = d.getUTCFullYear();
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(d.getUTCDate()).padStart(2, "0");
@@ -109,20 +109,16 @@ async function startServer() {
     try {
       let { amount, currency, title, description, payment_limit, return_url, merchant_ref_no } = req.body;
       
-      // ALWAYS use UTC Time (Standard for APIs)
-      const req_time = getReqTimeUtc();
+      // Using +8 Hour Offset as requested
+      const req_time = getReqTimeWithOffset(8);
       
       // Ensure merchant_ref_no is unique
       const unique_ref_no = `${merchant_ref_no}-${Date.now()}`;
       
-      // Calculate expired_date on server (4 hours from now in UTC)
-      const expDate = new Date(Date.now() + (4 * 60 * 60 * 1000));
-      const expired_date = expDate.getUTCFullYear() + 
-        String(expDate.getUTCMonth() + 1).padStart(2, "0") + 
-        String(expDate.getUTCDate()).padStart(2, "0") + 
-        String(expDate.getUTCHours()).padStart(2, "0") + 
-        String(expDate.getUTCMinutes()).padStart(2, "0") + 
-        String(expDate.getUTCSeconds()).padStart(2, "0");
+      // Calculate expired_date (2 hours after req_time)
+      const expired_date = getReqTimeWithOffset(10);
+
+      console.log(`Generating Payment Request: req_time=${req_time}, expired_date=${expired_date}, ref=${unique_ref_no}`);
 
       if (!merchantId || !apiKey || !rsaPublicKey) {
         console.error("Missing ABA PayWay credentials in environment variables.");
