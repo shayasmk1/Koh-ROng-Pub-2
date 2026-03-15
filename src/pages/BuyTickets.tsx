@@ -164,17 +164,20 @@ export default function BuyTickets() {
 
       const data = await response.json();
       
-      // Handle ABA PayWay API errors
+      // Handle server-side errors
+      if (!response.ok) {
+        throw new Error(data.message || data.error || `Server error: ${response.status}`);
+      }
+      
+      // Handle ABA PayWay API specific errors
       if (data.status && data.status.code && data.status.code !== "00") {
         throw new Error(`Payment Gateway Error: ${data.status.message || 'Unknown error'}`);
       }
       
       if (data.payment_url) {
         window.location.href = data.payment_url;
-      } else if (data.simulated) {
-        window.location.href = `/success?order_id=${orderId}&simulated=true`;
       } else {
-        throw new Error('Invalid response from payment gateway');
+        throw new Error('Invalid response from payment gateway: No payment URL returned.');
       }
 
     } catch (err: any) {

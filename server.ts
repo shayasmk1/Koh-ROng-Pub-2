@@ -114,10 +114,10 @@ async function startServer() {
       }
 
       if (!merchantId || !apiKey || !rsaPublicKey) {
-        console.warn("Missing ABA PayWay credentials. Falling back to simulated payment.");
-        return res.json({ 
-          simulated: true,
-          message: "Credentials not found. Simulating successful payment link creation."
+        console.error("Missing ABA PayWay credentials in environment variables.");
+        return res.status(400).json({ 
+          error: "Configuration Error",
+          message: "ABA PayWay credentials (Merchant ID, API Key, or RSA Public Key) are missing from the server environment variables."
         });
       }
       
